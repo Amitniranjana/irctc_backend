@@ -19,7 +19,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 // Authentication routes (Signup/Login) - Yahan Auth middleware NAHI chahiye
-app.use('/signup', router);
+app.use('/api/auth', router);
 
 // Example: Agar aapko protected routes banane hain toh aap Auth aise use karenge
 // app.use('/api/protected', Auth, protectedRouter);

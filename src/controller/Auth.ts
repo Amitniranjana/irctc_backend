@@ -47,16 +47,8 @@ export async function Signup(req: Request, res: Response) {
         expiryTime: expiryTime
       }
     })
-    const hashedPassword = await bcrypt.hash(password, 12);
-    const newUser = await prisma.user.create({
-      data: {
-        firstname,
-        lastname,
-        email,
-        password: hashedPassword,
-      },
-    });
-    return res.status(201).json({ message: 'signup successfully', user: newUser });
+    return  res.status(201).json({ message: 'otp sent successfully' })
+
   } catch (err) {
   console.error("Signup Error: ", err);
     return res.status(500).json({ message: 'Something went wrong' })
