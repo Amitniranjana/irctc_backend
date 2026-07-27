@@ -6,12 +6,20 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
+
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model otp{
+  id String @id @default(uuid())
+  email String @unique
+  otp String
+  expiryTime DateTime
+  createdAt DateTime @default(now())
 }
 
 model User{
@@ -20,6 +28,7 @@ model User{
   lastname String
   email String @unique
   password String?
+  isVerified Boolean @default(false)
   emailVerified Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
