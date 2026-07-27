@@ -19,7 +19,8 @@ export default async function sendOtp(username: string, email: string) {
     const { data, error } = await resend.emails.send({
       from: 'Acme <onboarding@resend.dev>',
       // Fix 2: Use the dynamic email parameter
-      to: [email],
+      //to: [email],
+      to: ['yamitniranjan@gmail.com'],
       subject: `Hello ${username}, here is your verification code`,
       html: `<strong>Your OTP: ${otp}</strong>`,
     });
