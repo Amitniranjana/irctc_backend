@@ -22,7 +22,7 @@ export async function Signup(req: Request, res: Response) {
       })
     }
     const username = `${firstname} ${lastname}`
-    let otp = (await sendOtp(username,email));
+    let otp = await sendOtp(username,email);
 
     if (!otp) {
       return res.status(404).json({
