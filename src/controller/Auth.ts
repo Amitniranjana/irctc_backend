@@ -4,6 +4,9 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 import type { Request, Response } from 'express';
 import sendOtp from '../utilis/email.ts';
+import { generateOtp } from '../utilis/generateOtp.ts';
+import {NotificationProducer} from '../kafka/producer/notification.producer.ts'
+const notificationProducer=new NotificationProducer()
 export async function Signup(req: Request, res: Response) {
   try {
     const { firstname, lastname, email, password, confirmpassword } = req.body;
@@ -22,9 +25,11 @@ export async function Signup(req: Request, res: Response) {
       })
     }
     const username = `${firstname} ${lastname}`
-    let otp = await sendOtp(username,email);
+    const otp=generateOtp().toString();
+    const result = await notificationProducer.sendOtpEmail(email ,otp,10);
 
-    if (!otp) {
+
+    if (!result) {
       return res.status(404).json({
         message: "problem in genrating otp"
       })
