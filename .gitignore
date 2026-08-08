@@ -1,18 +1,12 @@
-# Node modules
-node_modules/
+# Dependencies, secrets, and build output
+**/node_modules/
+**/.env
+**/.env.local
+**/dist/
+**/.next/
+**/src/generated/
 
-# Environment files
-.env
-.env.local
-
-# Build / output
-dist/
-build/
-
-# Logs
+# Logs and local editor files
 *.log
-
-# OS and editor
-.DS_Store
+*.DS_Store
 .vscode/
-/src/generated/prisma
