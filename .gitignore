@@ -1,6 +1,12 @@
+# Dependencies, secrets, and build output
 **/node_modules/
 **/.env
+**/.env.local
 **/dist/
 **/.next/
 **/src/generated/
+
+# Logs and local editor files
 *.log
+*.DS_Store
+.vscode/
