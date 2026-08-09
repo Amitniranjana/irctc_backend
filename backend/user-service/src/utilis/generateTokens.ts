@@ -3,7 +3,7 @@ import { error } from "node:console";
 
 export interface payloads {
     email: string,
-    id: string;
+    id?: string;
 }
 export async function generateAccessToken(payload: payloads) {
     const key = process.env.GENERATE_ACCESS_KEY;
