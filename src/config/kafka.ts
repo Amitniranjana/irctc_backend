@@ -42,3 +42,4 @@ export let disconnectProducer=async()=>{
 // gracefull shutdown
 process.on('SIGTERM',disconnectProducer);
 process.on('SIGINT' ,disconnectProducer)
+

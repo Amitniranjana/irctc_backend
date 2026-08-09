@@ -1,6 +1,6 @@
 
 import { producer, connectProducer } from "../../config/kafka.ts";
-import { KAFKA_TOPICS } from "../../../../shared/constants/kafka.topics.js"
+import { KAFKA_TOPICS } from '../../../../shared/constants/kafka.topics.ts'
 import type { promises } from "node:timers";
 
 
@@ -42,7 +42,7 @@ export class NotificationProducer {
     }
 
     async sendOtpEmail(email:string, otp:string, ttlMinutes = 5) {
-       await this.sendMessage(
+       return this.sendMessage(
             KAFKA_TOPICS.OTP_EMAIL,
             `${otp}-${email}`,
             { email, otp, ttlMinutes }
