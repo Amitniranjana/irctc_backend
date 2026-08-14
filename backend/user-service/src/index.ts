@@ -4,15 +4,18 @@ import { Auth } from './middleware/auth.middleware.js';
 import cors from 'cors';
 import sendotp from '../../notification-service/src/utilis/email.ts';
 import router from './routes/userRoutes.ts';
+import cookieParser from "cookie-parser";
+import dotenv from 'dotenv';
+
 
 const app: Express = express();
-
+dotenv.config();
 // 1. CORS ko call karna zaroori hai
 app.use(cors());
 
 // 2. Body parser
 app.use(express.json());
-
+app.use(cookieParser());
 // Public Route
 app.get('/', (req: Request, res: Response) => {
   res.send('Hello World!');
