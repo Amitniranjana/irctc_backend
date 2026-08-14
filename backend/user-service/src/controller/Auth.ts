@@ -9,7 +9,8 @@ import { NotificationProducer } from '../kafka/producer/notification.producer.ts
 import { generateAccessToken, generateRefreshToken } from '../utilis/generateTokens.ts';
 
 const notificationProducer = new NotificationProducer()
-export async function Signup(req: Request, res: Response) {
+
+export async function signup(req: Request, res: Response) {
   try {
     const { firstname, lastname, email, password, confirmpassword } = req.body;
     if (!email || !firstname || !lastname || !password || !confirmpassword) {
