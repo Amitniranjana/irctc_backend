@@ -6,9 +6,13 @@ import sendotp from '../../notification-service/src/utilis/email.ts';
 import router from './routes/userRoutes.ts';
 import cookieParser from "cookie-parser";
 import dotenv from 'dotenv';
-
+import { redisConnect } from './config/redis.ts';
 
 const app: Express = express();
+
+// connect redis
+await redisConnect()
+
 dotenv.config();
 // 1. CORS ko call karna zaroori hai
 app.use(cors());
