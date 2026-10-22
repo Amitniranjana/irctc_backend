@@ -1,29 +1,30 @@
 # IRCTC Backend Node.js
 
-This repository contains a Node.js backend services setup for authentication, OTP workflows, and future notification/event-driven integrations, along with a lightweight Next.js frontend shell.
+This repository contains a Node.js backend for authentication, OTP verification, Redis-backed profile caching, and Kafka-ready notification integration, with a lightweight frontend shell.
 
-## Project Overview
+## Project overview
 
 The project is split into the following main parts:
 
-- `backend/user-service` — Express.js API with Prisma ORM, PostgreSQL, Kafka producer wiring, and OTP signup flow
-- `backend/notification-service` — notification-focused service scaffold with Express and future Kafka consumer responsibilities
-- `backend/shared` — shared constants and cross-service topic definitions
+- `backend/user-service` — main Express API with Prisma, PostgreSQL, Redis, JWT auth, and OTP signup flow
+- `backend/notification-service` — notification service scaffold for future email/event consumers
+- `backend/shared` — shared constants and service-level definitions
 - `frontend/` — Next.js frontend shell
 
-## Current Backend Capabilities
+## Current capabilities
 
 The current implementation supports:
 
-- User signup
-- OTP generation and email delivery
-- OTP verification and user creation
+- User signup flow with validation
+- OTP generation and hash storage
+- OTP verification and JWT cookie issuance
 - Password hashing with bcrypt
-- Prisma-backed OTP persistence
-- Kafka producer support for notification topics
-- JWT-ready route protection middleware
+- Prisma-backed persistence for `User` and `otp`
+- Redis-based profile caching with TTL
+- Kafka producer setup for notification events
+- Protected route middleware pattern
 
-## Tech Stack
+## Tech stack
 
 ### Backend
 
@@ -32,9 +33,10 @@ The current implementation supports:
 - Express.js
 - Prisma ORM
 - PostgreSQL
+- Redis
 - Kafka with `kafkajs`
-- Resend for OTP email delivery
-- Docker Compose for PostgreSQL and Kafka infrastructure
+- Resend for email delivery
+- Docker Compose for service infrastructure
 
 ### Frontend
 
@@ -43,7 +45,7 @@ The current implementation supports:
 - TypeScript
 - Tailwind CSS
 
-## Repository Structure
+## Repository structure
 
 ```text
 .
@@ -51,10 +53,15 @@ The current implementation supports:
 │   ├── notification-service/
 │   ├── shared/
 │   └── user-service/
-└── frontend/
+├── frontend/
+├── docker-compose.yml
+├── prisma/
+├── README.md
+├── package.json
+└── tsconfig.json
 ```
 
-## Authentication and Notification Flow
+## Authentication and workflow
 
 ### 1. Signup
 
@@ -74,11 +81,12 @@ Request body:
 
 What happens:
 
-- Validates required fields
-- Confirms password match
-- Checks whether the email already exists
-- Generates an OTP and sends it through the email utility
-- Stores the hashed OTP and its expiry in Prisma
+- validates all required fields
+- checks password confirmation
+- checks if email already exists
+- creates a one-time OTP
+- stores hashed OTP with expiry in Prisma
+- sends the OTP via the notification layer
 
 ### 2. Verify OTP
 
@@ -88,40 +96,53 @@ Request body:
 
 ```json
 {
-  "firstname": "Amit",
-  "lastname": "Niranjana",
   "email": "user@example.com",
-  "password": "StrongPass123",
-  "confirmpassword": "StrongPass123",
   "otp": "123456"
 }
 ```
 
 What happens:
 
-- Retrieves the stored OTP record for the email
-- Validates whether the OTP has expired
-- Compares the submitted OTP with the stored hash
-- Creates the user record in PostgreSQL
-- Deletes the OTP record after successful verification
+- fetches the OTP record for the email
+- validates expiry time
+- compares submitted OTP with hashed OTP
+- loads the user account
+- creates access + refresh JWTs
+- stores tokens as HTTP-only cookies
+- deletes the OTP record after success
 
-### 3. Messaging Layer
+### 3. Profile retrieval with Redis cache
+
+The profile route is implemented in `backend/user-service/src/controller/user.ts`.
+
+Behavior:
+
+- reads the cookie token
+- verifies JWT payload and extracts user id
+- checks Redis for `user:{id}` cache
+- if cached: returns cached result immediately
+- otherwise: fetches the user from Prisma using `id`
+- stores the pruned user object in Redis with a 1-hour TTL
+
+This reduces repeated DB lookups for profile reads.
+
+### 4. Messaging layer
 
 The codebase contains a Kafka-based notification pipeline:
 
-- `backend/user-service/src/config/kafka.ts` sets up the Kafka producer
-- `backend/user-service/src/kafka/producer/notification.producer.ts` publishes messages
-- `backend/shared/constants/kafka.topics.js` centralizes the topic names
-- `backend/notification-service` is the intended notification consumer service
+- `backend/user-service/src/config/kafka.ts` configures producer support
+- `backend/user-service/src/kafka/producer/notification.producer.ts` publishes events
+- `backend/shared/constants/kafka.topics.js` contains topic names
+- `backend/notification-service` is the intended consumer service
 
-Current message topics include:
+Current topic examples include:
 
 - `notification.otp-email`
 - `notification.welcome-email`
 - `notification.booking-email`
 - `notification.payment-email`
 
-## Backend Setup
+## Backend setup
 
 ### 1. Install dependencies
 
@@ -132,42 +153,49 @@ npm install
 
 ### 2. Configure environment variables
 
-Create a `.env` file in the `backend/user-service/` directory using the example below:
+Create a `.env` file in `backend/user-service`:
 
 ```bash
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/irctc?schema=public"
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-POSTGRES_DB=irctc
-POSTGRES_PORT=5432
-PGADMIN_DEFAULT_EMAIL=admin@example.com
-PGADMIN_DEFAULT_PASSWORD=admin123
-PGADMIN_PORT=5050
-JWT_SECRET=your_jwt_secret
-RESEND_API_KEY=your_resend_api_key
-KAFKA_BROKER=localhost:9092
+DATABASE_URL="postgresql://postgres:password1235@localhost:5433/irctc_backend"
+REDIS_URL="redis://localhost:6379"
+JWT_SECRET="your_jwt_secret"
+GENERATE_ACCESS_KEY="your_access_key"
+GENERATE_REFRESH_KEY="your_refresh_key"
+RESEND_API_KEY="your_resend_api_key"
+KAFKA_BROKER="localhost:9092"
+NODE_ENV="development"
 ```
 
 ### 3. Start infrastructure with Docker Compose
 
+From the repo root:
+
 ```bash
-cd backend/user-service
 docker compose up -d
 ```
+
+This starts:
+
+- PostgreSQL on `localhost:5433`
+- Redis on `localhost:6379`
+- Kafka on `localhost:9092`
 
 ### 4. Run Prisma migrations
 
 ```bash
+cd backend/user-service
+npx prisma generate
 npx prisma migrate deploy
 ```
 
 ### 5. Start the API
 
 ```bash
+cd backend/user-service
 npm run dev
 ```
 
-The user service API runs on:
+The user service API runs at:
 
 - `http://localhost:3000`
 
@@ -178,11 +206,7 @@ cd backend/notification-service
 npm run dev
 ```
 
-The notification service currently starts on:
-
-- `http://localhost:3001`
-
-## Frontend Setup
+## Frontend setup
 
 ```bash
 cd frontend
@@ -194,32 +218,33 @@ The frontend is served at:
 
 - `http://localhost:3000`
 
-## Available Scripts
+## Available scripts
 
-### User Service
+### User service
 
 - `npm run dev` — starts the Express server in development mode
 - `npm run build` — compiles TypeScript
-- `npm run start` — runs the compiled production build
+- `npm run start` — starts the compiled production build
 
-### Notification Service
+### Notification service
 
-- `npm run dev` — starts the notification service with `tsx watch`
+- `npm run dev` — starts the notification service
 
 ### Frontend
 
-- `npm run dev` — starts the Next.js development server
-- `npm run build` — creates a production build
-- `npm run start` — starts the production server
+- `npm run dev` — starts the Next.js app
+- `npm run build` — creates the production build
+- `npm run start` — runs the production build
 - `npm run lint` — runs ESLint
 
-## Environment Notes
+## Environment notes
 
-- The user service uses Prisma with PostgreSQL.
-- OTP emails are sent using Resend.
-- Kafka messaging is scaffolded for future asynchronous notification delivery.
-- Protected routes can be guarded using the `Auth` middleware from `src/middleware/auth.middleware.ts`.
+- PostgreSQL is used for persistent user and OTP data
+- Redis is used for profile caching and quick read access
+- Resend is used for email sending
+- Kafka is scaffolded for notification event flows
+- JWTs are issued as cookies for protected requests
 
-## Current Status
+## Current status
 
-The repository currently implements the core signup and OTP verification workflow in the user service and includes a Kafka-based notification publishing layer for event-driven delivery. The notification service is present as a separate service scaffold and is intended to consume these events as the project evolves.
+The repository currently implements the main signup, OTP verification, JWT issuance, and Redis-backed profile retrieval flow in the user service. The notification service and Kafka pipeline are present as integration points for future async messaging and outbound notification delivery.
